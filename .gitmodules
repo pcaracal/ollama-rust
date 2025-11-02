@@ -1,0 +1,3 @@
+[submodule "examples/testdata/Airports"]
+	path = examples/testdata/Airports
+	url = https://github.com/mwgg/Airports.git

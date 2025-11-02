@@ -45,16 +45,14 @@ async fn main() -> anyhow::Result<()> {
         Message::user("What is the current time, and when should I feed my cats?"),
     ];
 
-    let mut stream = ollama
-        .chat(
-            ChatRequest::new(crate::common::QWEN3_4B_I, messages)
-                .options(ModelOptions::default().seed(1).num_ctx(8192))
-                // .think(ollama_rust::generation::parameters::Think::Enabled)
-                .tool(Arc::new(DateTimeTool))
-                .stream(true),
-            history.clone(),
-        )
-        .await?;
+    let mut stream = ollama.chat(
+        ChatRequest::new(crate::common::QWEN3_4B_I, messages)
+            .options(ModelOptions::default().seed(1).num_ctx(8192))
+            // .think(ollama_rust::generation::parameters::Think::Enabled)
+            .tool(Arc::new(DateTimeTool))
+            .stream(true),
+        history.clone(),
+    )?;
 
     let mut stdout = stdout();
     let mut did_think = false;
