@@ -4,8 +4,6 @@ use ollama_rust::{
 use tokio::io::{AsyncWriteExt, stdout};
 use tokio_stream::StreamExt;
 
-use crate::common::QWEN3_4B;
-
 pub mod common;
 
 #[tokio::main]
@@ -14,7 +12,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut stream = ollama
         .generate(
-            GenerateRequest::new(QWEN3_4B, "Why do cats always land on their feet?")
+            GenerateRequest::new(common::QWEN3_4B_I, "Why do cats always land on their feet?")
                 .options(ModelOptions::default())
                 .think(ollama_rust::generation::parameters::Think::Disabled),
         )

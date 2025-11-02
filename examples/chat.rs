@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use ollama_rust::{
     generation::{
-        chat::{message::Message, request::ChatRequest},
+        chat::{history::History, message::Message, request::ChatRequest},
         tools::{Tool, ToolFunction},
     },
     model::ModelOptions,
@@ -35,6 +35,7 @@ impl Tool for DateTimeTool {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let ollama = Ollama::default();
+    let history = History::default();
 
     let messages = vec![
         Message::system(
@@ -51,6 +52,7 @@ async fn main() -> anyhow::Result<()> {
                 // .think(ollama_rust::generation::parameters::Think::Enabled)
                 .tool(Arc::new(DateTimeTool))
                 .stream(true),
+            history.clone(),
         )
         .await?;
 
@@ -58,41 +60,29 @@ async fn main() -> anyhow::Result<()> {
     let mut did_think = false;
     let mut message_started = false;
 
-    while let Some(a) = stream.next().await {
-        match a {
+    while let Some(res) = stream.next().await {
+        match res {
             Ok(res) => {
-                for res in res {
-                    if let Some(think) = &res.message.thinking {
-                        if !did_think {
-                            did_think = true;
-                            stdout.write_all(b"<think>\n").await?;
-                        }
-
-                        stdout.write_all(think.as_bytes()).await?;
-                    } else {
-                        if did_think && !message_started {
-                            message_started = true;
-                            did_think = false;
-                            stdout.write_all(b"</think>\n").await?;
-                        }
-
-                        stdout.write_all(res.message.content.as_bytes()).await?;
+                if let Some(think) = &res.message.thinking {
+                    if !did_think {
+                        did_think = true;
+                        stdout.write_all(b"<think>\n").await?;
                     }
 
-                    if !res.message.tool_calls.is_empty() {
-                        stdout.write_all(b"<tools>\n").await?;
-                        for tool_call in &res.message.tool_calls {
-                            stdout
-                                .write_all(format!("{tool_call:?}\n").as_bytes())
-                                .await?;
-                        }
-                        stdout.write_all(b"</tools>\n").await?;
+                    stdout.write_all(think.as_bytes()).await?;
+                } else {
+                    if did_think && !message_started {
+                        message_started = true;
+                        did_think = false;
+                        stdout.write_all(b"</think>\n").await?;
                     }
 
-                    stdout.flush().await?;
+                    stdout.write_all(res.message.content.as_bytes()).await?;
                 }
+
+                stdout.flush().await?;
             }
-            Err(e) => println!(">> Error: {e}"),
+            Err(e) => println!("Error: {e}"),
         }
     }
 

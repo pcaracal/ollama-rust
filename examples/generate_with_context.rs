@@ -6,8 +6,6 @@ use ollama_rust::{
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, stdin, stdout};
 use tokio_stream::StreamExt;
 
-use crate::common::QWEN3_4B;
-
 pub mod common;
 
 #[tokio::main]
@@ -29,7 +27,7 @@ async fn main() -> anyhow::Result<()> {
             break;
         }
 
-        let request = GenerateRequest::new(QWEN3_4B, line)
+        let request = GenerateRequest::new(common::QWEN3_4B_I, line)
             .options(ModelOptions::default().num_ctx(16384))
             .context(context.clone());
         let mut stream: GenerateResponseStream = ollama.generate(request).await?;

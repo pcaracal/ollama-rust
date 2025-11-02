@@ -1,6 +1,6 @@
 use crate::generation::tools::ToolCall;
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Role {
     #[serde(rename = "system")]
     System,
@@ -38,9 +38,10 @@ pub struct Message {
     #[serde(default)]
     pub tool_calls: Vec<ToolCall>,
 
-    /// Name of the tool used in the message.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tool_name: Option<String>,
+    /// True if the message is complete, false if still generating.
+    #[serde(skip)]
+    #[serde(default)]
+    pub done: bool,
 }
 
 impl Message {
@@ -54,6 +55,11 @@ impl Message {
         Self::new(content, Role::System)
     }
 
+    /// Once a tool finishes
+    pub fn tool<S: Into<String>>(content: S) -> Self {
+        Self::new(content, Role::Tool)
+    }
+
     fn new<S: Into<String>>(content: S, role: Role) -> Self {
         Self {
             role,
@@ -61,7 +67,31 @@ impl Message {
             thinking: None,
             images: vec![],
             tool_calls: vec![],
-            tool_name: None,
+            done: false,
         }
+    }
+
+    /// Merge another message into this one.
+    /// Useful for keeping a history of complete messages when streaming.
+    ///
+    /// Following fields are extended from the `other` message:
+    /// `content`, `thinking`, `images`, `tool_calls`, `done`
+    ///
+    /// # Note
+    /// It does not make sense to merge messages if their roles differ or if the message is complete.
+    /// This function does not check for that.
+    pub fn merge_from(&mut self, other: &Message) {
+        self.content.push_str(&other.content);
+
+        if let Some(think) = &other.thinking {
+            match &mut self.thinking {
+                Some(existing) => existing.push_str(think),
+                None => self.thinking = Some(think.clone()),
+            }
+        }
+
+        self.images.extend_from_slice(&other.images);
+        self.tool_calls.extend_from_slice(&other.tool_calls);
+        self.done = other.done;
     }
 }
