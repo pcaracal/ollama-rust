@@ -9,7 +9,8 @@ pub const QWEN3_EMBED_4B_2560D: &str = "qwen3-embedding:4b";
 pub const QWEN3_EMBED_8B_4096D: &str = "qwen3-embedding:8b";
 
 // Rerank
-pub const QWEN3_RERANK_8B: &str = "dengcao/Qwen3-Reranker-8B:Q4_K_M";
+pub const QWEN3_RERANK_4B_2560D: &str = "dengcao/Qwen3-Reranker-4B:Q5_K_M";
+pub const QWEN3_RERANK_8B_4096D: &str = "dengcao/Qwen3-Reranker-8B:Q4_K_M";
 
 // Testing data
 #[derive(Debug, Clone, serde::Deserialize)]
