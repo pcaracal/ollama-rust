@@ -1,7 +1,9 @@
 // Translation of https://github.com/ollama/ollama/blob/main/api/types.go into Rust
 
+use crate::generation::chat::message::Message;
+
 #[derive(Debug, Clone, serde::Deserialize)]
-pub struct GenerateResponse {
+pub struct ChatResponse {
     /// Model name
     pub model: String,
 
@@ -14,21 +16,14 @@ pub struct GenerateResponse {
     /// ISO 8601 timestamp of response creation
     pub created_at: String,
 
-    /// The model's generated text response
-    pub response: String,
-
-    /// The model's generated thinking output
-    pub thinking: Option<String>,
+    /// Message or part of a message from the model
+    pub message: Message,
 
     /// Indicates whether generation has finished
     pub done: bool,
 
     /// Reason the generation stopped
     pub done_reason: Option<String>,
-
-    /// Encoding of the conversation used in this response
-    /// This can be sent in the next request to keep a conversational memory.
-    pub context: Option<Vec<i32>>,
 
     /// Debug information for template rendering
     pub debug_info: Option<DebugInfo>,

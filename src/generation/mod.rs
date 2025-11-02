@@ -1,2 +1,4 @@
+pub mod chat;
 pub mod generate;
 pub mod parameters;
+pub mod tools;
