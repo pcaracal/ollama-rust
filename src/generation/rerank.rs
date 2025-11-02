@@ -1,7 +1,4 @@
-use tokio_stream::StreamExt;
-
 use crate::{
-    OllamaError,
     generation::generate::{request::GenerateRequest, response::GenerateResponse},
     model::ModelOptions,
     ollama::Ollama,
@@ -44,31 +41,21 @@ The answer can ONLY be "yes" or "no", nothing else.
 "#
         );
 
-        let mut stream = self
-            .generate(
-                GenerateRequest::new(model, &prompt)
-                    .keep_alive(crate::generation::parameters::KeepAlive::Custom(
-                        "30s".to_string(),
-                    ))
-                    .stream(false)
-                    .options(
-                        ModelOptions::default()
-                            .temperature(0.)
-                            .top_k(1)
-                            .top_p(1.)
-                            .repeat_penalty(1.)
-                            .stop(vec!["\n".to_string()]),
-                    ),
-            )
-            .await?;
-
-        if let Some(item) = stream.next().await {
-            let a = item.map(|a| a.first().cloned())?;
-            if let Some(response) = a {
-                return Ok(response);
-            }
-        }
-
-        Err(OllamaError::Other("Reranking failed.".to_string()))
+        self.generate_without_stream(
+            GenerateRequest::new(model, &prompt)
+                .keep_alive(crate::generation::parameters::KeepAlive::Custom(
+                    "30s".to_string(),
+                ))
+                .stream(false)
+                .options(
+                    ModelOptions::default()
+                        .temperature(0.)
+                        .top_k(1)
+                        .top_p(1.)
+                        .repeat_penalty(1.)
+                        .stop(vec!["\n".to_string()]),
+                ),
+        )
+        .await
     }
 }

@@ -50,4 +50,36 @@ impl Ollama {
 
         Ok(Box::pin(stream))
     }
+
+    /// Ollama's `/api/generate` endpoint. Returns one `GenerateResponse`.
+    /// This function will immediately fail if the request has `stream` set to true or unset
+    /// (true by default).
+    ///
+    /// # Errors
+    ///
+    /// If Ollama rejects the request, e.g. the Model does not support thinking.
+    /// If the response cannot be parsed.
+    pub async fn generate_without_stream(
+        &self,
+        request: GenerateRequest,
+    ) -> crate::Result<GenerateResponse> {
+        if request.stream.is_none() || request.stream.is_some_and(|s| s) {
+            return Err(OllamaError::Other(
+                "generate_without_stream called with stream=true".to_string(),
+            ));
+        }
+
+        let url = self.url.join("/api/generate")?;
+        let response = self.client.post(url).json(&request).send().await?;
+
+        if !response.status().is_success() {
+            return Err(crate::OllamaError::Other(format!(
+                "Error {}:\n{}",
+                response.status(),
+                response.text().await.unwrap_or_default()
+            )));
+        }
+
+        Ok(response.json::<GenerateResponse>().await?)
+    }
 }
