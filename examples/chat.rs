@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
+use colored::Colorize;
 use ollama_rust::{
     generation::{
         chat::{history::History, message::Message, request::ChatRequest},
+        parameters::KeepAlive,
         tools::{Tool, ToolFunction},
     },
     model::ModelOptions,
@@ -34,6 +36,8 @@ impl Tool for DateTimeTool {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    colored::control::set_override(true);
+
     let ollama = Ollama::default();
     let history = History::default();
 
@@ -55,19 +59,18 @@ async fn main() -> anyhow::Result<()> {
             break;
         }
 
-        let mut stream = ollama
-            .chat(
-                ChatRequest::new(
-                    crate::common::QWEN3_4B_I,
-                    vec![system.clone(), Message::user(line)],
-                )
-                .options(ModelOptions::default().seed(1).num_ctx(8192))
-                // .think(ollama_rust::generation::parameters::Think::Enabled)
-                .tool(Arc::new(DateTimeTool))
-                .stream(true),
-                history.clone(),
+        let mut stream = ollama.chat(
+            ChatRequest::new(
+                crate::common::QWEN3_4B_T,
+                vec![system.clone(), Message::user(line)],
             )
-            .await?;
+            .options(ModelOptions::default().seed(1).num_ctx(8192))
+            .keep_alive(KeepAlive::Custom("1m".to_string()))
+            .think(ollama_rust::generation::parameters::Think::Enabled)
+            .tool(Arc::new(DateTimeTool))
+            .stream(true),
+            history.clone(),
+        )?;
 
         let mut did_think = false;
         let mut message_started = false;
@@ -78,15 +81,23 @@ async fn main() -> anyhow::Result<()> {
                     if let Some(think) = &res.message.thinking {
                         if !did_think {
                             did_think = true;
-                            stdout.write_all(b"<think>\n").await?;
+                            stdout
+                                .write_all("\n<think>\n".blue().to_string().as_bytes())
+                                .await?;
+                            stdout.flush().await?;
                         }
 
-                        stdout.write_all(think.as_bytes()).await?;
+                        stdout
+                            .write_all(think.cyan().to_string().as_bytes())
+                            .await?;
                     } else {
                         if did_think && !message_started {
                             message_started = true;
                             did_think = false;
-                            stdout.write_all(b"</think>\n").await?;
+                            stdout
+                                .write_all("</think>\n\n".blue().to_string().as_bytes())
+                                .await?;
+                            stdout.flush().await?;
                         }
 
                         stdout.write_all(res.message.content.as_bytes()).await?;

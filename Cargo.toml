@@ -16,3 +16,4 @@ url = "2.5.7"
 [dev-dependencies]
 anyhow = "1.0.100"
 chrono = "0.4.42"
+colored = "3.0.0"
