@@ -1,63 +1,39 @@
-use ollama_rust::{
-    OllamaError,
-    generation::{generate::GenerateRequest, response::GenerateResponse},
-    model::ModelOptions,
-    ollama::Ollama,
-};
+use ollama_rust::{generation::generate::GenerateRequest, model::ModelOptions, ollama::Ollama};
+use tokio::io::{AsyncWriteExt, stdout};
 use tokio_stream::StreamExt;
+
+use crate::common::QWEN3_4B;
+
+pub mod common;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let ollama = Ollama::default();
 
-    let response = ollama
+    let mut stream = ollama
         .generate(
-            GenerateRequest::new("gemma3:latest", "Why do cats always land on their feet?")
-                .options(ModelOptions::default().temperature(0.4))
+            GenerateRequest::new(QWEN3_4B, "Why do cats always land on their feet?")
+                .options(ModelOptions::default())
                 .think(ollama_rust::generation::parameters::Think::Disabled),
         )
         .await?;
 
-    let mut stream = response.bytes_stream().map(|r| match r {
-        Ok(bytes) => {
-            let iter = serde_json::Deserializer::from_slice(&bytes).into_iter();
-            let res = iter
-                .filter_map(Result::ok)
-                .collect::<Vec<GenerateResponse>>();
+    let mut stdout = stdout();
 
-            Ok(res)
-        }
-        Err(e) => Err(OllamaError::Other(format!("Failed to parse response: {e}"))),
-    });
-
-    let mut did_think = false;
-
+    stdout.write_all(b"Response:\n\n").await?;
     while let Some(a) = stream.next().await {
         match a {
             Ok(res) => {
-                for part in res {
-                    if let Some(thinking) = part.thinking {
-                        if !did_think {
-                            println!("Thinking:\n");
-                        }
-
-                        print!("{thinking}");
-                        did_think = true;
-                    } else {
-                        if did_think {
-                            println!("Response:\n");
-                            did_think = false;
-                        }
-
-                        print!("{}", part.response);
-                    }
+                for res in res {
+                    stdout.write_all(res.response.as_bytes()).await?;
+                    stdout.flush().await?;
                 }
             }
-            Err(e) => println!("Error: {e}"),
+            Err(e) => println!(">> Error: {e}"),
         }
     }
 
-    println!();
+    println!("\n\n[Done]");
 
     Ok(())
 }
