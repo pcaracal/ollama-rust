@@ -8,7 +8,7 @@ use ollama_rust::{
     model::ModelOptions,
     ollama::Ollama,
 };
-use tokio::io::{AsyncWriteExt, stdout};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, stdin, stdout};
 use tokio_stream::StreamExt;
 
 pub mod common;
@@ -37,56 +37,67 @@ async fn main() -> anyhow::Result<()> {
     let ollama = Ollama::default();
     let history = History::default();
 
-    let messages = vec![
-        Message::system(
-            "You are a helpful assistant with access to the tool date_time_info.\n\
+    let system = Message::system(
+        "You are a helpful assistant with access to the tool date_time_info.\n\
              You must use this tool if the user asks for the current date or time.",
-        ),
-        Message::user("What is the current time, and when should I feed my cats?"),
-    ];
+    );
 
-    let mut stream = ollama
-        .chat(
-            ChatRequest::new(crate::common::QWEN3_4B_I, messages)
+    let mut stdout = stdout();
+    loop {
+        stdout.write_all(b"\n > ").await?;
+        stdout.flush().await?;
+
+        let reader = BufReader::new(stdin());
+        let line = reader.lines().next_line().await?.unwrap_or_default();
+        let line = line.trim();
+        if line.is_empty() || line.eq_ignore_ascii_case("exit") || line.eq_ignore_ascii_case("quit")
+        {
+            break;
+        }
+
+        let mut stream = ollama
+            .chat(
+                ChatRequest::new(
+                    crate::common::QWEN3_4B_I,
+                    vec![system.clone(), Message::user(line)],
+                )
                 .options(ModelOptions::default().seed(1).num_ctx(8192))
                 // .think(ollama_rust::generation::parameters::Think::Enabled)
                 .tool(Arc::new(DateTimeTool))
                 .stream(true),
-            history.clone(),
-        )
-        .await?;
+                history.clone(),
+            )
+            .await?;
 
-    let mut stdout = stdout();
-    let mut did_think = false;
-    let mut message_started = false;
+        let mut did_think = false;
+        let mut message_started = false;
 
-    while let Some(res) = stream.next().await {
-        match res {
-            Ok(res) => {
-                if let Some(think) = &res.message.thinking {
-                    if !did_think {
-                        did_think = true;
-                        stdout.write_all(b"<think>\n").await?;
+        while let Some(res) = stream.next().await {
+            match res {
+                Ok(res) => {
+                    if let Some(think) = &res.message.thinking {
+                        if !did_think {
+                            did_think = true;
+                            stdout.write_all(b"<think>\n").await?;
+                        }
+
+                        stdout.write_all(think.as_bytes()).await?;
+                    } else {
+                        if did_think && !message_started {
+                            message_started = true;
+                            did_think = false;
+                            stdout.write_all(b"</think>\n").await?;
+                        }
+
+                        stdout.write_all(res.message.content.as_bytes()).await?;
                     }
 
-                    stdout.write_all(think.as_bytes()).await?;
-                } else {
-                    if did_think && !message_started {
-                        message_started = true;
-                        did_think = false;
-                        stdout.write_all(b"</think>\n").await?;
-                    }
-
-                    stdout.write_all(res.message.content.as_bytes()).await?;
+                    stdout.flush().await?;
                 }
-
-                stdout.flush().await?;
+                Err(e) => println!("Error: {e}"),
             }
-            Err(e) => println!("Error: {e}"),
         }
     }
-
-    println!("\n\n[Done]");
 
     Ok(())
 }
