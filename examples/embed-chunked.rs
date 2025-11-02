@@ -17,7 +17,7 @@ async fn main() -> anyhow::Result<()> {
 
     let airports = Airport::load()?;
 
-    let total_size = 1000;
+    let total_size = 200;
     let chunk_size = 50;
 
     let mut stream = ollama.generate_embeddings_chunked(
@@ -35,7 +35,6 @@ async fn main() -> anyhow::Result<()> {
     )?;
 
     let mut embeddings = vec![];
-
     let mut gen_sum = Duration::ZERO;
 
     while let Some(item) = stream.next().await {
@@ -64,7 +63,7 @@ async fn main() -> anyhow::Result<()> {
         "\n{}",
         "================================================================================".blue()
     );
-    println!("Total embeddings received: {}", embeddings.len());
+    println!("Total embeddings completed: {}", embeddings.len());
     println!("Total generation duration: {gen_sum:?}");
 
     Ok(())

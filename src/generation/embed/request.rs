@@ -2,7 +2,7 @@
 
 use crate::{generation::parameters, model::ModelOptions};
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
 pub enum EmbedInput {
     Single(String),
@@ -24,6 +24,18 @@ impl From<&str> for EmbedInput {
 impl From<Vec<String>> for EmbedInput {
     fn from(value: Vec<String>) -> Self {
         EmbedInput::Multiple(value)
+    }
+}
+
+impl IntoIterator for EmbedInput {
+    type Item = String;
+    type IntoIter = std::vec::IntoIter<String>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self {
+            EmbedInput::Single(s) => vec![s].into_iter(),
+            EmbedInput::Multiple(v) => v.into_iter(),
+        }
     }
 }
 

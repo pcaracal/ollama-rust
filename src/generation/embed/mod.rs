@@ -32,7 +32,10 @@ impl Ollama {
             )));
         }
 
-        Ok(response.json::<EmbedResponse>().await?)
+        let mut response = response.json::<EmbedResponse>().await?;
+        response.input_text = Some(request.input);
+
+        Ok(response)
     }
 
     /// Ollama's `/api/embed` endpoint. Returns a stream of `EmbedResponse`.
@@ -74,7 +77,12 @@ impl Ollama {
             for chunk in chunks {
                 let mut request = request.clone();
                 request.input = request::EmbedInput::Multiple(chunk);
-                let response = ollama.client.post(url.clone()).json(&request).send().await?;
+                let response = ollama
+                    .client
+                    .post(url.clone())
+                    .json(&request)
+                    .send()
+                    .await?;
 
                 if !response.status().is_success() {
                     yield Err(crate::OllamaError::Other(format!(
@@ -86,7 +94,10 @@ impl Ollama {
                     continue;
                 }
 
-                yield Ok(response.json::<EmbedResponse>().await?);
+                let mut response = response.json::<EmbedResponse>().await?;
+                response.input_text = Some(request.input);
+
+                yield Ok(response);
             }
         });
 

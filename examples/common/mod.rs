@@ -27,6 +27,7 @@ pub struct Airport {
     pub tz: String,
 }
 
+#[allow(clippy::missing_errors_doc)]
 impl Airport {
     /// Loads around 29'294 `Airport` objects
     pub fn load() -> anyhow::Result<HashMap<String, Self>> {
