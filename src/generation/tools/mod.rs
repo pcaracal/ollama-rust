@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, pin::Pin};
 
 pub trait Tool: Send + Sync {
     /// The information provided to the model when providing this tool
@@ -7,7 +7,10 @@ pub trait Tool: Send + Sync {
 
     /// Will be called when the model invokes this tool
     #[allow(clippy::missing_errors_doc)]
-    fn execute(&self, arguments: ToolCallArguments) -> crate::Result<String>;
+    fn execute(
+        &self,
+        arguments: ToolCallArguments,
+    ) -> Pin<Box<dyn Future<Output = Result<String, String>> + Send + Sync + 'static>>;
 }
 
 impl std::fmt::Debug for dyn Tool {

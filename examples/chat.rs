@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{pin::Pin, sync::Arc};
 
 use colored::Colorize;
 use ollama_rust::{
@@ -29,8 +29,8 @@ impl Tool for DateTimeTool {
     fn execute(
         &self,
         _: ollama_rust::generation::tools::ToolCallArguments,
-    ) -> ollama_rust::Result<String> {
-        Ok(chrono::Local::now().to_rfc2822())
+    ) -> Pin<Box<dyn Future<Output = Result<String, String>> + Send + Sync + 'static>> {
+        Box::pin(async move { Ok(chrono::Local::now().to_rfc2822()) })
     }
 }
 

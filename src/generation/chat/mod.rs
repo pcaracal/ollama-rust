@@ -6,9 +6,7 @@ use tokio_stream::{Stream, StreamExt};
 
 use crate::{
     OllamaError,
-    generation::chat::{
-        history::History, message::Message, request::ChatRequest, response::ChatResponse,
-    },
+    generation::chat::{history::History, request::ChatRequest, response::ChatResponse},
     ollama::Ollama,
 };
 
@@ -66,8 +64,10 @@ impl Ollama {
                     for tc in &last.tool_calls {
                         for tool in &request.tools {
                             if tool.tool_function().name == tc.function.name {
-                                let result = tool.execute(tc.function.arguments.clone())?;
-                                tool_messages.push(Message::tool(result));
+                                match tool.execute(tc.function.arguments.clone()).await {
+                                    Ok(res) => tool_messages.push(message::Message::tool(res)),
+                                    Err(err) => tool_messages.push(message::Message::tool(err)),
+                                }
                             }
                         }
                     }
