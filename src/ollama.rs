@@ -21,7 +21,7 @@ impl Ollama {
     ///
     /// # Errors
     /// * Returns an error if the provided URL is invalid.
-    pub fn new<U: IntoUrl>(url: U) -> Result<Self, reqwest::Error> {
+    pub fn new<U: IntoUrl>(url: U) -> crate::Result<Self> {
         Ok(Self {
             url: url.into_url()?,
             client: reqwest::Client::new(),
