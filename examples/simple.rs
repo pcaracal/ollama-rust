@@ -1,4 +1,6 @@
-use ollama_rust::{generation::generate::GenerateRequest, model::ModelOptions, ollama::Ollama};
+use ollama_rust::{
+    generation::generate::request::GenerateRequest, model::ModelOptions, ollama::Ollama,
+};
 use tokio::io::{AsyncWriteExt, stdout};
 use tokio_stream::StreamExt;
 

@@ -1,15 +1,6 @@
 // Translation of https://github.com/ollama/ollama/blob/main/api/types.go into Rust
 
-use std::pin::Pin;
-
-use tokio_stream::{Stream, StreamExt};
-
-use crate::{
-    OllamaError,
-    generation::{parameters, response::GenerateResponse},
-    model::ModelOptions,
-    ollama::Ollama,
-};
+use crate::{generation::parameters, model::ModelOptions};
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct GenerateRequest {
@@ -181,46 +172,5 @@ impl GenerateRequest {
     pub fn debug_render_only(mut self, debug_render_only: bool) -> Self {
         self.debug_render_only = Some(debug_render_only);
         self
-    }
-}
-
-pub type GenerateResponseStream = Pin<Box<dyn Stream<Item = crate::Result<Vec<GenerateResponse>>>>>;
-
-impl Ollama {
-    /// Ollama's `/api/generate` endpoint. Returns a stream of many `GenerateResponse`.
-    /// If the request has `stream` disabled, it will return a single `GenerateResponse` in the stream.
-    ///
-    /// # Errors
-    ///
-    /// If Ollama rejects the request, e.g. the Model does not support thinking.
-    /// If the response cannot be parsed.
-    pub async fn generate(
-        &self,
-        request: GenerateRequest,
-    ) -> crate::Result<GenerateResponseStream> {
-        let url = self.url.join("/api/generate")?;
-        let response = self.client.post(url).json(&request).send().await?;
-
-        if !response.status().is_success() {
-            return Err(crate::OllamaError::Other(format!(
-                "Error {}:\n{}",
-                response.status(),
-                response.text().await.unwrap_or_default()
-            )));
-        }
-
-        let stream = response.bytes_stream().map(|r| match r {
-            Ok(bytes) => {
-                let iter = serde_json::Deserializer::from_slice(&bytes).into_iter();
-                let res = iter
-                    .filter_map(Result::ok)
-                    .collect::<Vec<GenerateResponse>>();
-
-                Ok(res)
-            }
-            Err(e) => Err(OllamaError::Other(format!("Failed to parse response: {e}"))),
-        });
-
-        Ok(Box::pin(stream))
     }
 }
