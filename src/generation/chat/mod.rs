@@ -26,6 +26,8 @@ impl Ollama {
     ///
     /// If Ollama rejects the request, e.g. the Model does not support thinking.
     /// If the response cannot be parsed.
+    /// If the history cannot be updated.
+    /// If a tool execution fails.
     pub fn chat(
         &self,
         request: ChatRequest,
@@ -41,8 +43,8 @@ impl Ollama {
                     break;
                 }
 
-                history.extend(&request.messages);
-                request.messages = history.messages();
+                history.extend(&request.messages)?;
+                request.messages = history.messages()?;
 
                 let response = ollama.post(&request).await?;
                 request.messages.clear();
@@ -52,13 +54,13 @@ impl Ollama {
                 while let Some(res) = stream.next().await {
                     if let Ok(responses) = res {
                         for response in responses {
-                            history.push(&response.message);
+                            history.push(&response.message)?;
                             yield Ok(response);
                         }
                     }
                 }
 
-                if let Some(last) = history.last() {
+                if let Some(last) = history.last()? {
                     let mut tool_messages = vec![];
 
                     for tc in &last.tool_calls {

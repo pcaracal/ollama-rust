@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::generation::chat::history::HistoryPoisonError;
+
 pub mod generation;
 pub mod model;
 pub mod ollama;
@@ -17,4 +19,10 @@ pub enum OllamaError {
 
     #[error("{0}")]
     Other(String),
+}
+
+impl<'a> From<HistoryPoisonError<'a>> for OllamaError {
+    fn from(err: HistoryPoisonError<'a>) -> Self {
+        OllamaError::Other(format!("History lock poisoned: {err}"))
+    }
 }
