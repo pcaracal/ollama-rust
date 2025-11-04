@@ -1,4 +1,4 @@
-use ollama_rust::ollama::Ollama;
+use ollama_rust::{model::ModelOptions, ollama::Ollama};
 
 pub mod common;
 
@@ -39,7 +39,18 @@ async fn main() -> anyhow::Result<()> {
     let ollama = Ollama::default();
     for doc in top_25_results {
         let response = ollama
-            .rerank(common::QWEN3_RERANK_8B_4096D, question, doc)
+            .rerank(
+                common::QWEN3_RERANK_8B_4096D,
+                question,
+                doc,
+                None,
+                ModelOptions::default()
+                    .temperature(0.)
+                    .top_k(1)
+                    .top_p(1.)
+                    .repeat_penalty(1.)
+                    .stop(vec!["\n".to_string()]),
+            )
             .await
             .expect("Rerank failed");
         println!(

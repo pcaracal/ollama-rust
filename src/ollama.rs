@@ -9,22 +9,24 @@ pub struct Ollama {
 impl Default for Ollama {
     /// Creates a new Ollama client with the default URL `http://127.0.0.1:11434`
     fn default() -> Self {
-        Self::new("http://127.0.0.1:11434").unwrap()
+        Self {
+            url: Url::parse("http://127.0.0.1:11434").unwrap(),
+            client: Client::new(),
+        }
     }
 }
 
 impl Ollama {
-    /// Creates a new `Ollama` client with the specified URL.
-    ///
-    /// # Arguments
-    /// * `url` - The base URL of the Ollama server.
-    ///
+    /// Set the base URL for the Ollama API
     /// # Errors
     /// * Returns an error if the provided URL is invalid.
-    pub fn new<U: IntoUrl>(url: U) -> crate::Result<Self> {
-        Ok(Self {
-            url: url.into_url()?,
-            client: reqwest::Client::new(),
-        })
+    pub fn with_url<U: IntoUrl>(mut self, url: U) -> crate::Result<Self> {
+        self.url = url.into_url()?;
+        Ok(self)
+    }
+
+    /// Set the `reqwest::Client` to be used
+    pub fn with_client(mut self, client: reqwest::Client) {
+        self.client = client;
     }
 }
