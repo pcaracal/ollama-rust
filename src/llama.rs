@@ -26,7 +26,9 @@ impl Llama {
     }
 
     /// Set the `reqwest::Client` to be used
-    pub fn with_client(mut self, client: reqwest::Client) {
+    #[must_use]
+    pub fn with_client(mut self, client: reqwest::Client) -> Self {
         self.client = client;
+        self
     }
 }
