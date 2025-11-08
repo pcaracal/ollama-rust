@@ -1,6 +1,6 @@
 use std::sync::{Arc, LockResult, Mutex, MutexGuard, PoisonError};
 
-use crate::generation::chat::message::Message;
+use crate::generation::chat::message::{Message, Role};
 
 /// This struct uses Arc internally and is safe to be shared/cloned across threads.
 #[derive(Debug, Clone, Default)]
@@ -12,6 +12,22 @@ pub type HistoryMutexGuard<'a> = MutexGuard<'a, Vec<Message>>;
 pub type HistoryPoisonError<'a> = PoisonError<HistoryMutexGuard<'a>>;
 
 impl History {
+    #[must_use]
+    pub fn new(messages: Vec<Message>) -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(messages)),
+        }
+    }
+
+    /// Delete the history.
+    ///
+    /// # Errors
+    /// If the internal mutex is poisoned.
+    pub fn clear(&self) -> Result<(), HistoryPoisonError<'_>> {
+        self.messages_mut()?.clear();
+        Ok(())
+    }
+
     /// Push a message to the history.
     ///
     /// # Errors
@@ -37,7 +53,8 @@ impl History {
     fn push_with_merge(messages: &mut Vec<Message>, new_message: &Message) {
         if let Some(last) = messages.last_mut()
             && !last.done
-            && last.role == new_message.role
+            && last.role == Role::Assistant
+            && new_message.role == Role::Assistant
         {
             last.merge_from(new_message);
         } else {

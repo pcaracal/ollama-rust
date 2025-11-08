@@ -36,47 +36,47 @@ impl Ollama {
         let ollama = self.clone();
 
         Ok(Box::pin(stream! {
-            let mut request = request.clone();
+        let mut request = request.clone();
 
-            loop {
-                if request.messages.is_empty() {
-                    break;
-                }
+        loop {
+            if request.messages.is_empty() {
+                break;
+            }
 
-                history.extend(&request.messages)?;
-                request.messages = history.messages()?;
+            history.extend(&request.messages)?;
+            request.messages = history.messages()?;
 
-                let response = ollama.post(&request).await?;
-                request.messages.clear();
+            let response = ollama.post(&request).await?;
+            request.messages.clear();
 
-                let mut stream = Self::stream_request_and_filter(response);
+            let mut stream = Self::stream_request_and_filter(response);
 
-                while let Some(res) = stream.next().await {
-                    if let Ok(responses) = res {
-                        for response in responses {
-                            history.push(&response.message)?;
-                            yield Ok(response);
-                        }
+            while let Some(res) = stream.next().await {
+                if let Ok(responses) = res {
+                    for response in responses {
+                        history.push(&response.message.clone().created_at(response.created_at.clone()))?;
+                        yield Ok(response);
                     }
                 }
+            }
 
-                if let Some(last) = history.last()? {
-                    let mut tool_messages = vec![];
+            if let Some(last) = history.last()? {
+                let mut tool_messages = vec![];
 
-                    for tc in &last.tool_calls {
-                        for tool in &request.tools {
-                            if tool.tool_function().name == tc.function.name {
-                                match tool.execute(tc.function.arguments.clone()).await {
-                                    Ok(res) => tool_messages.push(message::Message::tool(res)),
-                                    Err(err) => tool_messages.push(message::Message::tool(err)),
-                                }
+                for tc in &last.tool_calls {
+                    for tool in &request.tools {
+                        if tool.tool_function().name == tc.function.name {
+                            match tool.execute(tc.function.arguments.clone()).await {
+                                Ok(res) => tool_messages.push(message::Message::tool(res)),
+                                Err(err) => tool_messages.push(message::Message::tool(err)),
                             }
                         }
                     }
-
-                    request.messages = tool_messages;
                 }
+
+                request.messages = tool_messages;
             }
+        }
         }))
     }
 

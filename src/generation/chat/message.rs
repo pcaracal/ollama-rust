@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::generation::tools::ToolCall;
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -10,6 +12,18 @@ pub enum Role {
     Assistant,
     #[serde(rename = "tool")]
     Tool,
+}
+
+impl Display for Role {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let role_str = match self {
+            Role::System => "System",
+            Role::User => "User",
+            Role::Assistant => "Assistant",
+            Role::Tool => "Tool",
+        };
+        write!(f, "{role_str}")
+    }
 }
 
 /// Message is a single message in a chat sequence. The message contains the
@@ -42,6 +56,11 @@ pub struct Message {
     #[serde(skip)]
     #[serde(default)]
     pub done: bool,
+
+    /// ISO 8601 timestamp of response creation
+    /// Pulled from chat response
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<String>,
 }
 
 impl Message {
@@ -67,15 +86,22 @@ impl Message {
             thinking: None,
             images: vec![],
             tool_calls: vec![],
+            created_at: None,
             done: false,
         }
+    }
+
+    #[must_use]
+    pub fn created_at<S: Into<String>>(mut self, timestamp: S) -> Self {
+        self.created_at = Some(timestamp.into());
+        self
     }
 
     /// Merge another message into this one.
     /// Useful for keeping a history of complete messages when streaming.
     ///
     /// Following fields are extended from the `other` message:
-    /// `content`, `thinking`, `images`, `tool_calls`, `done`
+    /// `content`, `thinking`, `images`, `tool_calls`, `done`, `created_at`.
     ///
     /// # Note
     /// It does not make sense to merge messages if their roles differ or if the message is complete.
@@ -93,5 +119,6 @@ impl Message {
         self.images.extend_from_slice(&other.images);
         self.tool_calls.extend_from_slice(&other.tool_calls);
         self.done = other.done;
+        self.created_at.clone_from(&other.created_at);
     }
 }
