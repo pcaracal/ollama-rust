@@ -1,0 +1,13 @@
+llama-server \
+    --model models/gguf/Qwen-Qwen3-Reranker-8B-q8_0.gguf \
+    --ctx-size 8192 \
+    --parallel 8 \
+    --batch-size 8192 \
+    --ubatch-size 8192 \
+    --flash-attn on \
+    --host 0.0.0.0 \
+    --port 8012 \
+    --log-verbosity 1 \
+    --temp 0.0 \
+    --pooling rank \
+    --reranking

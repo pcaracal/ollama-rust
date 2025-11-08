@@ -22,24 +22,24 @@ async fn main() -> anyhow::Result<()> {
     println!("\nQueston: {query}\n");
 
     let llama = Llama::default();
-    println!("Individual Document Scores:");
-    for (i, doc) in documents.iter().enumerate() {
-        let response = llama
-            .rerank(RerankRequest::new_single("", query, &doc.clone()))
-            .await
-            .expect("Rerank failed");
-        println!(
-            "Document {}: Score {:.4}",
-            i + 1,
-            response.results[0].relevance_score
-        );
-    }
+    // println!("Individual Document Scores:");
+    // for (i, doc) in documents.iter().enumerate() {
+    //     let response = llama
+    //         .rerank(RerankRequest::new_single("", query, &doc.clone()))
+    //         .await
+    //         .expect("Rerank failed");
+    //     println!(
+    //         "Document {}: Score {:.4}",
+    //         i + 1,
+    //         response.results[0].relevance_score
+    //     );
+    // }
 
     let response = llama
-        .rerank(RerankRequest::new("", query, documents.clone()).top_n(10))
+        .rerank(RerankRequest::new("", query, documents.clone()).top_n(4))
         .await
         .expect("Rerank failed");
-    println!("\nTop 3 Results:");
+    println!("\nTop Results:");
     for (i, result) in response.results.iter().enumerate() {
         println!(
             "Rank {}: Score {:.4}\nDocument: {:?}\n",
