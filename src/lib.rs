@@ -4,6 +4,7 @@ use crate::generation::chat::history::HistoryPoisonError;
 
 pub mod generation;
 pub mod llama;
+pub mod misc;
 pub mod model;
 pub mod ollama;
 
